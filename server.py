@@ -1,8 +1,8 @@
 """
-Round Robin Desk: NCAA men's basketball. PAPER ONLY. Nothing here places a bet.
+Parlay Desk: NCAA men's basketball. PAPER ONLY. Nothing here places a bet.
 
-Each day at LOCK_HOUR ET it scans the slate, keeps legs with a 3.3%+ edge over the fair price, and if 4 legs
-from 4 different games qualify at ONE book it locks a single 4-team round robin (by 2s). Fewer than 4 = no ticket.
+Each day at LOCK_HOUR ET it scans the slate, keeps legs with a 3.3%+ edge over the fair price, and if 3 legs
+from 3 different games qualify at ONE book it locks a single 3-team parlay. Fewer than 3 = no ticket.
 Every qualifying leg is also tracked as a single so the edge can be judged faster than tickets alone allow.
 Graded from final scores. Record is kept in R (1R = the stake), with closing-line value.
 
@@ -24,13 +24,13 @@ ODDS = "https://api.the-odds-api.com/v4"
 SPORT = "basketball_ncaab"
 ET = ZoneInfo("America/New_York")
 LOCK_HOUR = int(os.environ.get("LOCK_HOUR", "11"))             # 11:00 AM ET
-UNIT = float(os.environ.get("PARLAY_UNIT", "1"))               # paper $ per two-team parlay -> $6 a ticket
+UNIT = float(os.environ.get("PARLAY_UNIT", "5"))               # paper $ per ticket (1% of the $500 bankroll)
 BANKROLL = float(os.environ.get("BANKROLL", "500"))
 MAX_SINGLES = 8                                                # tracked single legs per day
 BOOK_KEYS = {"draftkings": "DraftKings", "fanduel": "FanDuel", "betmgm": "BetMGM", "williamhill_us": "Caesars",
              "fanatics": "Fanatics", "espnbet": "ESPN BET", "betrivers": "BetRivers", "pinnacle": "Pinnacle",
              "novig": "Novig"}                                 # <=10 books = 1 region on the Odds API
-PLAY_BOOKS = {"DraftKings", "FanDuel", "BetMGM", "Caesars", "Fanatics", "ESPN BET", "BetRivers"}   # books with round robins
+PLAY_BOOKS = {"DraftKings", "FanDuel", "BetMGM", "Caesars", "Fanatics", "ESPN BET", "BetRivers"}   # books with parlays
 CREDITS = {"remaining": None, "used": None}
 CACHE = {"ts": 0, "events": [], "err": None}
 MUTEX = threading.Lock()
@@ -60,7 +60,7 @@ def init_db():
 
 def http(url, params):
     url += "?" + urlencode(params)
-    with urlopen(Request(url, headers={"User-Agent": "RoundRobinDesk", "Accept": "application/json"}), timeout=40) as r:
+    with urlopen(Request(url, headers={"User-Agent": "ParlayDesk", "Accept": "application/json"}), timeout=40) as r:
         h = r.headers
         if h.get("x-requests-remaining") is not None:
             CREDITS["remaining"], CREDITS["used"] = h.get("x-requests-remaining"), h.get("x-requests-used")
@@ -102,7 +102,7 @@ def scan(max_age=900):
 
 
 def lock_day(force=False):
-    """once a day: lock the ticket (if 4 legs qualify at one book) and the tracked singles"""
+    """once a day: lock the ticket (if 3 legs qualify at one book) and the tracked singles"""
     day = et_day()
     with MUTEX:
         with db() as c:
@@ -248,7 +248,7 @@ def today():
         locked = c.execute("select v from meta where k=?", ("locked:" + day,)).fetchone()
         t = c.execute("select * from tickets where day=? order by id desc limit 1", (day,)).fetchone()
         legs = [dict(r) for r in c.execute("select * from legs where day=? order by edge desc", (day,))]
-    out = {"day": day, "locked_at": locked["v"] if locked else None, "lock_hour": LOCK_HOUR, "unit": UNIT,
+    out = {"day": day, "locked_at": locked["v"] if locked else None, "lock_hour": LOCK_HOUR, "unit": UNIT, "legs": engine.LEGS,
            "has_key": bool(KEY), "credits": CREDITS, "as_of": now()}
     if locked:
         out["ticket"] = None
@@ -314,7 +314,7 @@ def main():
     init_db()
     threading.Thread(target=loop, daemon=True).start()
     port = int(os.environ.get("PORT", "8000"))
-    print(f"Round Robin Desk on :{port}  key={'set' if KEY else 'MISSING'}  db={DB}", flush=True)
+    print(f"Parlay Desk on :{port}  key={'set' if KEY else 'MISSING'}  db={DB}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()
 
 

@@ -49,14 +49,15 @@ def test_guards_and_ranges():
 def four_games(book="draftkings"):
     return [ev(i, {"pinnacle": [mk("spreads", -105, -105, -3.5)], book: [mk("spreads", 116, -140, -3.5)]}) for i in range(4)]
 
-def test_ticket_needs_4_at_one_book():
+def test_ticket_needs_3_at_one_book():
     c = sum((E.scan_event(e, BK, PLAY) for e in four_games()), [])
     t = E.build_ticket(c)
-    assert t and t["book"] == "DraftKings" and len(t["legs"]) == 4 and len(t["parlays"]) == 6
-    assert len({l["event_id"] for l in t["legs"]}) == 4
-    assert abs(t["ev"] - ((0.5 * 2.16) ** 2 - 1)) < 1e-3           # +16.6% per $1 with a real 3.7% edge on each leg
-    # 3 legs at one book and 1 at another = no ticket
-    evs = four_games()[:3] + [ev(9, {"pinnacle": [mk("spreads", -105, -105, -3.5)], "fanduel": [mk("spreads", 116, -140, -3.5)]})]
+    assert t and t["book"] == "DraftKings" and len(t["legs"]) == 3 and len(t["parlays"]) == 1
+    assert len({l["event_id"] for l in t["legs"]}) == 3
+    assert abs(t["ev"] - ((0.5 * 2.16) ** 3 - 1)) < 1e-3           # +26% per $1 with a real 3.7% edge on each leg
+    assert abs(t["parlays"][0]["dec"] - 2.16 ** 3) < 1e-3
+    # 2 legs at one book and 1 at another = no ticket
+    evs = four_games()[:2] + [ev(9, {"pinnacle": [mk("spreads", -105, -105, -3.5)], "fanduel": [mk("spreads", 116, -140, -3.5)]})]
     assert E.build_ticket(sum((E.scan_event(e, BK, PLAY) for e in evs), [])) is None
 
 def test_settle_leg():
@@ -66,15 +67,16 @@ def test_settle_leg():
     assert E.settle_leg("h2h", "away", None, 70, 66) == "Lost"
 
 def test_settle_ticket():
-    o = [-110] * 4
-    assert E.settle_ticket(["Won"] * 4, o) == (15.87, 6.0, 2.645)
-    assert E.settle_ticket(["Won", "Won", "Won", "Lost"], o) == (4.93, 6.0, 0.822)
-    assert E.settle_ticket(["Won", "Won", "Lost", "Lost"], o) == (-2.36, 6.0, -0.393)
-    assert E.settle_ticket(["Won", "Lost", "Lost", "Lost"], o) == (-6.0, 6.0, -1.0)
-    assert E.settle_ticket(["Won", "Won", "Pending", "Lost"], o) is None
-    # a push turns its parlays into singles on the other leg
-    net, stake, r = E.settle_ticket(["Won", "Won", "Push", "Lost"], o)
-    assert abs(net - (2.6446 + 0.9091 * 2 - 3)) < 0.01
+    o = [-110] * 3
+    assert E.settle_ticket(["Won"] * 3, o, 5) == (29.79, 5.0, 5.958)      # 6.96x on $5
+    assert E.settle_ticket(["Won", "Won", "Lost"], o, 5) == (-5.0, 5.0, -1.0)   # any loss loses the ticket
+    assert E.settle_ticket(["Lost", "Lost", "Lost"], o, 5) == (-5.0, 5.0, -1.0)
+    assert E.settle_ticket(["Won", "Pending", "Lost"], o, 5) is None
+    # a push drops that leg: the ticket pays as a 2-team parlay
+    assert E.settle_ticket(["Won", "Won", "Push"], o, 5) == (13.22, 5.0, 2.645)
+    assert E.settle_ticket(["Push", "Push", "Void"], o, 5) == (0.0, 5.0, 0.0)
+    # the old round robin math still works when asked for by 2s
+    assert E.settle_ticket(["Won", "Won", "Won", "Lost"], [-110] * 4, 1, by=2) == (4.93, 6.0, 0.822)
 
 def test_r_stats():
     s = E.r_stats([2.645, -1, -0.393, 0.822])

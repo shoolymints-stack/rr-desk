@@ -1,5 +1,5 @@
 """
-Round Robin Desk: the math. No network, no database, so every rule here can be tested offline.
+Parlay Desk: the math. No network, no database, so every rule here can be tested offline.
 
 Same method as MINTZ:
   fair price = Pinnacle's no-vig line, or the median no-vig line of 3+ books at the SAME number
@@ -16,12 +16,12 @@ APLUS_EDGE = 0.033
 A_EDGE = 0.030
 MIN_ODDS = -120         # no leg priced worse than this (MINTZ props use +100; game lines live near -110)
 MAX_ODDS = 300          # no long shots inside a parlay
-LEGS = 4                # 4-team round robin
-BY = 2                  # by 2s = 6 two-team parlays
+LEGS = 3                # Nov 25: one 3-team parlay (was a 4-team round robin by 2s)
+BY = 3                  # all 3 legs in one parlay; any losing leg loses the ticket
 GUARD_FAIR_GAP = 0.10   # a price this far off the fair line is almost always a mislabeled market
 GUARD_BOOK_GAP = 0.08   # ...and so is a price this far off the other books
 SHARP = "Pinnacle"
-EXCHANGES = {"Kalshi", "Polymarket", "Polymarket US", "Novig", "ProphetX"}   # no round robins there: fair price only
+EXCHANGES = {"Kalshi", "Polymarket", "Polymarket US", "Novig", "ProphetX"}   # no parlays there: fair price only
 
 
 def imp(o):
@@ -94,7 +94,7 @@ def fair_for(books):
 
 
 def scan_event(ev, book_names, play_books, min_edge=MIN_EDGE):
-    """every leg in one game that clears the edge at a book where a round robin can be placed"""
+    """every leg in one game that clears the edge at a book where a parlay can be placed"""
     home, away = ev["home_team"], ev["away_team"]
     out = []
     for (market, point), books in event_markets(ev, book_names).items():
@@ -131,15 +131,15 @@ def best_per_game(cands):
 
 
 def parlay_ev(legs, by=BY):
-    """expected return per $1 staked across the round robin, at the fair chances (legs are different games)"""
+    """expected return per $1 staked on the ticket, at the fair chances (legs are different games)"""
     combos = list(itertools.combinations(legs, by))
     tot = sum(math.prod(l["fair"] * dec(l["odds"]) for l in c) - 1 for c in combos)
     return tot / len(combos)
 
 
 def build_ticket(cands, legs=LEGS, by=BY):
-    """ONE round robin: 4 legs, 4 different games, all priced at the same book (a ticket can't mix books).
-    Fewer than 4 qualifying legs at any one book = no ticket today."""
+    """ONE parlay: 3 legs, 3 different games, all priced at the same book (a ticket can't mix books).
+    Fewer than 3 qualifying legs at any one book = no ticket today."""
     by_book = {}
     for c in cands:
         by_book.setdefault(c["book"], []).append(c)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Round Robin Desk</title>
+<title>Parlay Desk</title>
 <style>
 :root{--bg:#0d1014;--card:#161b22;--line:#252c36;--text:#e8edf2;--muted:#8b97a5;--mint:#3ddc97;--mint-soft:rgba(61,220,151,.14);--pink:#ff6b8b;--amber:#ffb347;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 *{box-sizing:border-box}
@@ -36,8 +36,8 @@ ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
 </head>
 <body>
 <div class="wrap">
-  <h1>Round Robin <span>Desk</span><span class="paper">PAPER</span></h1>
-  <div class="sub">NCAA men's basketball. One 4-team round robin a day, only when 4 legs clear a 3.3% edge.</div>
+  <h1>Parlay <span>Desk</span><span class="paper">PAPER</span></h1>
+  <div class="sub">NCAA men's basketball. One 3-team parlay a day, only when 3 legs clear a 3.3% edge.</div>
   <nav>
     <button data-v="today" class="on">Today</button>
     <button data-v="record">Record</button>
@@ -51,20 +51,20 @@ ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
         <li><b>Fair price.</b> Pinnacle's line with the vig removed, or the middle of 3 or more books at the same number.</li>
         <li><b>Edge.</b> Fair win chance minus the win chance the offered price needs. A leg needs 3.3% or better (A+).</li>
         <li><b>One leg per game.</b> Moneyline, spread or total, whichever has the biggest edge. Prices from -120 to +300.</li>
-        <li><b>One ticket.</b> 4 legs from 4 games, all at the same book, played as a round robin by 2s: 6 two-team parlays. Fewer than 4 legs at one book means no ticket that day.</li>
+        <li><b>One ticket.</b> 3 legs from 3 games, all at the same book, in one parlay. All 3 must win. Fewer than 3 legs at one book means no ticket that day.</li>
         <li><b>Singles.</b> Every qualifying leg is also tracked alone. That shows whether the edge is real much sooner than tickets can.</li>
       </ul></div>
     <div class="card"><h2>Reading the record</h2>
       <ul>
-        <li><b>1R</b> is the stake. A ticket's R is its net result divided by the 6 units staked.</li>
+        <li><b>1R</b> is the stake. A losing ticket is -1R. A winning ticket is its payout in stakes, usually +5R to +7R.</li>
         <li><b>Expectancy</b> is the average R per play. Above zero means the method makes money per play on average.</li>
         <li><b>Hit rate vs break-even</b> compares how often legs win with how often they must win at the prices taken.</li>
         <li><b>CLV</b> checks the fair price about 10 minutes before tip. Positive means the price taken beat the close, the best early sign of a real edge.</li>
       </ul></div>
     <div class="card"><h2>What to expect</h2>
       <ul>
-        <li>Most days have no ticket. Four legs clearing 3.3% at one book is uncommon.</li>
-        <li>A round robin loses its full stake when 0 or 1 legs win, and loses a little when 2 win. The profit comes from 3 and 4 leg days.</li>
+        <li>Many days have no ticket. Three legs clearing 3.3% at one book is uncommon.</li>
+        <li>A 3-team parlay loses its full stake unless all 3 legs win. Even with a real edge it wins only about 1 time in 6, so losing streaks of 15 or more tickets are normal.</li>
         <li>Nothing here is a guarantee. Judge it on 100 or more singles and 30 or more tickets, on paper, before any money goes on it.</li>
       </ul></div>
   </div>
@@ -90,16 +90,14 @@ function renderToday(d){
   const status=d.locked_at?`Locked ${time(d.locked_at)}`:`Preview. Locks at ${d.lock_hour>12?d.lock_hour-12:d.lock_hour}:00 ${d.lock_hour>=12?'PM':'AM'} ET`;
   h+=`<div class="card"><h2>Today's ticket <span class="pill">${esc(status)}</span></h2>`;
   const t=d.ticket;
-  if(t&&t.legs&&t.legs.length===4){
-    const stake=(d.unit*6).toFixed(2);
-    h+=`<div class="muted small">4-team round robin by 2s at <b style="color:var(--text)">${esc(t.book)}</b> · 6 parlays × $${Number(d.unit).toFixed(2)} = $${stake} · expected ${t.ev>=0?'+':''}${(t.ev*100).toFixed(1)}% per $1</div>`;
+  if(t&&t.legs&&t.legs.length===3){
+    const pay=t.legs.reduce((a,l)=>a*dec(l.odds),1);
+    h+=`<div class="muted small">3-team parlay at <b style="color:var(--text)">${esc(t.book)}</b> · $${Number(d.unit).toFixed(2)} to win $${(d.unit*(pay-1)).toFixed(2)} (${pay.toFixed(2)}x) · expected ${t.ev>=0?'+':''}${(t.ev*100).toFixed(1)}% per $1</div>`;
     h+=t.legs.map(l=>legRow(l,true)).join('');
-    const pays=(t.parlays||[]).map(p=>`${p.legs.map(i=>i+1).join('+')}: ${p.dec.toFixed(2)}x`).join(' · ');
-    if(pays) h+=`<div class="muted small" style="margin-top:8px">Parlays (leg numbers, payout per $1): ${pays}</div>`;
     if(t.result&&t.result!=='Pending') h+=`<div style="margin-top:8px">Result: ${resTag(t.result)} <b class="${cls(t.r)}">${fmtR(t.r)}</b> ($${Number(t.net).toFixed(2)})</div>`;
   } else {
     const n=(d.singles||[]).length;
-    h+=`<div class="empty"><b>No ticket today.</b><br>${n} leg${n===1?'':'s'} cleared 3.3%${n?', but not 4 at the same book':''}. Sitting out is part of the method.</div>`;
+    h+=`<div class="empty"><b>No ticket today.</b><br>${n} leg${n===1?'':'s'} cleared 3.3%${n?', but not 3 at the same book':''}. Sitting out is part of the method.</div>`;
   }
   h+='</div>';
   h+=`<div class="card"><h2>Qualifying legs (tracked as singles)</h2>`;
@@ -110,7 +108,7 @@ function renderToday(d){
 function stat(k,v,c){return `<div class="stat"><div class="k">${k}</div><div class="v ${c||''}">${v}</div></div>`}
 function renderRecord(d){
   const t=d.ticket_stats,s=d.single_stats,c=d.clv;
-  let h=`<div class="card"><h2>Tickets (round robins)</h2><div class="stats">
+  let h=`<div class="card"><h2>Tickets (3-team parlays)</h2><div class="stats">
     ${stat('Settled',t.n)}${stat('Total',fmtR(t.total_r),cls(t.total_r))}${stat('Expectancy',fmtR(t.exp_r),cls(t.exp_r))}
     ${stat('Paper bankroll','$'+t.bankroll.toFixed(2),cls(t.net))}${stat('SQN',t.sqn??'—')}${stat('Best / worst',t.n?fmtR(t.best)+' / '+fmtR(t.worst):'—')}</div>
     <div class="muted small" style="margin-top:8px">${t.n<30?`${t.n} of 30 tickets needed before this means much.`:'Sample is large enough to start judging.'}</div></div>`;
