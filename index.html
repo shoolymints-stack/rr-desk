@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round Robin Desk</title>
+<style>
+:root{--bg:#0d1014;--card:#161b22;--line:#252c36;--text:#e8edf2;--muted:#8b97a5;--mint:#3ddc97;--mint-soft:rgba(61,220,151,.14);--pink:#ff6b8b;--amber:#ffb347;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 var(--font)}
+.wrap{max-width:860px;margin:0 auto;padding:18px 14px 60px}
+h1{font-size:22px;margin:0}h1 span{color:var(--mint)}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 14px}
+.paper{display:inline-block;background:rgba(255,179,71,.14);color:var(--amber);font-weight:700;font-size:11px;letter-spacing:.06em;padding:3px 8px;border-radius:99px;margin-left:8px;vertical-align:3px}
+nav{display:flex;gap:6px;margin-bottom:14px}
+nav button{flex:1;background:var(--card);color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:10px;font:600 14px var(--font);cursor:pointer}
+nav button.on{color:var(--bg);background:var(--mint);border-color:var(--mint)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font-size:15px;margin:0 0 8px}
+.muted{color:var(--muted)}.small{font-size:13px}
+.leg{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.leg:first-of-type{border-top:0}
+.leg b{display:block}
+.right{text-align:right;white-space:nowrap}
+.grade{display:inline-block;min-width:30px;text-align:center;font:700 12px/1 var(--font);padding:4px 7px;border-radius:99px;background:var(--mint-soft);color:var(--mint)}
+.good{color:var(--mint)}.bad{color:var(--pink)}.warn{color:var(--amber)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.stat .k{color:var(--muted);font-size:12px}.stat .v{font:700 19px var(--font)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 4px;border-top:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:600;border-top:0}
+.empty{padding:22px 6px;text-align:center;color:var(--muted)}
+.pill{font-size:12px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+ul{margin:6px 0 0;padding-left:20px}li{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Round Robin <span>Desk</span><span class="paper">PAPER</span></h1>
+  <div class="sub">NCAA men's basketball. One 4-team round robin a day, only when 4 legs clear a 3.3% edge.</div>
+  <nav>
+    <button data-v="today" class="on">Today</button>
+    <button data-v="record">Record</button>
+    <button data-v="how">How it works</button>
+  </nav>
+  <div id="today"></div>
+  <div id="record" hidden></div>
+  <div id="how" hidden>
+    <div class="card"><h2>The method</h2>
+      <ul>
+        <li><b>Fair price.</b> Pinnacle's line with the vig removed, or the middle of 3 or more books at the same number.</li>
+        <li><b>Edge.</b> Fair win chance minus the win chance the offered price needs. A leg needs 3.3% or better (A+).</li>
+        <li><b>One leg per game.</b> Moneyline, spread or total, whichever has the biggest edge. Prices from -120 to +300.</li>
+        <li><b>One ticket.</b> 4 legs from 4 games, all at the same book, played as a round robin by 2s: 6 two-team parlays. Fewer than 4 legs at one book means no ticket that day.</li>
+        <li><b>Singles.</b> Every qualifying leg is also tracked alone. That shows whether the edge is real much sooner than tickets can.</li>
+      </ul></div>
+    <div class="card"><h2>Reading the record</h2>
+      <ul>
+        <li><b>1R</b> is the stake. A ticket's R is its net result divided by the 6 units staked.</li>
+        <li><b>Expectancy</b> is the average R per play. Above zero means the method makes money per play on average.</li>
+        <li><b>Hit rate vs break-even</b> compares how often legs win with how often they must win at the prices taken.</li>
+        <li><b>CLV</b> checks the fair price about 10 minutes before tip. Positive means the price taken beat the close, the best early sign of a real edge.</li>
+      </ul></div>
+    <div class="card"><h2>What to expect</h2>
+      <ul>
+        <li>Most days have no ticket. Four legs clearing 3.3% at one book is uncommon.</li>
+        <li>A round robin loses its full stake when 0 or 1 legs win, and loses a little when 2 win. The profit comes from 3 and 4 leg days.</li>
+        <li>Nothing here is a guarantee. Judge it on 100 or more singles and 30 or more tickets, on paper, before any money goes on it.</li>
+      </ul></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const odds=o=>o>0?'+'+o:String(o);
+const pct=x=>x==null?'—':(x*100).toFixed(1)+'%';
+const fmtR=r=>r==null?'—':(r>0?'+':'')+Number(r).toFixed(2)+'R';
+const cls=r=>r==null?'':r>0?'good':r<0?'bad':'';
+const time=t=>new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+const dec=o=>1+(o>0?o/100:100/-o);
+const resTag=r=>`<span class="${r==='Won'?'good':r==='Lost'?'bad':'muted'}">${esc(r)}</span>`;
+function legRow(l,showRes){
+  return `<div class="leg"><div><b>${esc(l.selection)}</b><span class="muted small">${esc(l.game)} · ${time(l.commence)}${l.score?' · final '+esc(l.score):''}</span></div>
+  <div class="right"><b>${odds(l.odds)}</b> <span class="grade">${esc(l.grade)}</span><br><span class="muted small">${esc(l.book)} · edge ${pct(l.edge)}${showRes&&l.result!=='Pending'?' · '+resTag(l.result):''}</span></div></div>`;
+}
+function renderToday(d){
+  let h='';
+  if(!d.has_key) h+=`<div class="card warn">Waiting for the odds key. Add ODDS_API_KEY to the service and restart.</div>`;
+  else if(d.err) h+=`<div class="card warn">${esc(d.err)}</div>`;
+  const status=d.locked_at?`Locked ${time(d.locked_at)}`:`Preview. Locks at ${d.lock_hour>12?d.lock_hour-12:d.lock_hour}:00 ${d.lock_hour>=12?'PM':'AM'} ET`;
+  h+=`<div class="card"><h2>Today's ticket <span class="pill">${esc(status)}</span></h2>`;
+  const t=d.ticket;
+  if(t&&t.legs&&t.legs.length===4){
+    const stake=(d.unit*6).toFixed(2);
+    h+=`<div class="muted small">4-team round robin by 2s at <b style="color:var(--text)">${esc(t.book)}</b> · 6 parlays × $${Number(d.unit).toFixed(2)} = $${stake} · expected ${t.ev>=0?'+':''}${(t.ev*100).toFixed(1)}% per $1</div>`;
+    h+=t.legs.map(l=>legRow(l,true)).join('');
+    const pays=(t.parlays||[]).map(p=>`${p.legs.map(i=>i+1).join('+')}: ${p.dec.toFixed(2)}x`).join(' · ');
+    if(pays) h+=`<div class="muted small" style="margin-top:8px">Parlays (leg numbers, payout per $1): ${pays}</div>`;
+    if(t.result&&t.result!=='Pending') h+=`<div style="margin-top:8px">Result: ${resTag(t.result)} <b class="${cls(t.r)}">${fmtR(t.r)}</b> ($${Number(t.net).toFixed(2)})</div>`;
+  } else {
+    const n=(d.singles||[]).length;
+    h+=`<div class="empty"><b>No ticket today.</b><br>${n} leg${n===1?'':'s'} cleared 3.3%${n?', but not 4 at the same book':''}. Sitting out is part of the method.</div>`;
+  }
+  h+='</div>';
+  h+=`<div class="card"><h2>Qualifying legs (tracked as singles)</h2>`;
+  h+=(d.singles||[]).length?d.singles.map(l=>legRow(l,true)).join(''):`<div class="empty">Nothing clears 3.3% right now${d.games!=null?' across '+d.games+' games':''}.</div>`;
+  h+='</div>';
+  $('today').innerHTML=h;
+}
+function stat(k,v,c){return `<div class="stat"><div class="k">${k}</div><div class="v ${c||''}">${v}</div></div>`}
+function renderRecord(d){
+  const t=d.ticket_stats,s=d.single_stats,c=d.clv;
+  let h=`<div class="card"><h2>Tickets (round robins)</h2><div class="stats">
+    ${stat('Settled',t.n)}${stat('Total',fmtR(t.total_r),cls(t.total_r))}${stat('Expectancy',fmtR(t.exp_r),cls(t.exp_r))}
+    ${stat('Paper bankroll','$'+t.bankroll.toFixed(2),cls(t.net))}${stat('SQN',t.sqn??'—')}${stat('Best / worst',t.n?fmtR(t.best)+' / '+fmtR(t.worst):'—')}</div>
+    <div class="muted small" style="margin-top:8px">${t.n<30?`${t.n} of 30 tickets needed before this means much.`:'Sample is large enough to start judging.'}</div></div>`;
+  h+=`<div class="card"><h2>Singles (every qualifying leg)</h2><div class="stats">
+    ${stat('Settled',s.n)}${stat('Total',fmtR(s.total_r),cls(s.total_r))}${stat('Expectancy',fmtR(s.exp_r),cls(s.exp_r))}
+    ${stat('Hit rate',s.hit_rate==null?'—':s.hit_rate+'%')}${stat('Break-even',s.be_rate==null?'—':s.be_rate+'%')}
+    ${stat('CLV',c.avg==null?'—':(c.avg>0?'+':'')+c.avg+'%',cls(c.avg))}${stat('Beat the close',c.n?c.beat+' of '+c.n:'—')}</div>
+    <div class="muted small" style="margin-top:8px">${s.n<100?`${s.n} of 100 legs needed before this means much.`:'Sample is large enough to start judging.'}</div></div>`;
+  h+=`<div class="card"><h2>Ticket log</h2>`+(d.tickets.length?d.tickets.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><b>${esc(k.day)}</b> · ${esc(k.book)} · ${resTag(k.result)} <b class="${cls(k.r)}">${fmtR(k.r)}</b>
+     <div class="muted small">${k.legs.map(l=>`${esc(l.selection)} ${odds(l.odds)} (${esc(l.result)})`).join(' · ')}</div></div>`).join(''):`<div class="empty">No tickets yet.</div>`)+`</div>`;
+  h+=`<div class="card"><h2>Singles log</h2>`+(d.singles.length?`<table><tr><th>Day</th><th>Play</th><th>Price</th><th>Edge</th><th>CLV</th><th>Result</th><th>R</th></tr>`+
+     d.singles.map(l=>`<tr><td>${esc(l.day.slice(5))}</td><td>${esc(l.selection)}<br><span class="muted">${esc(l.book)}</span></td><td>${odds(l.odds)}</td><td>${pct(l.edge)}</td><td class="${cls(l.clv)}">${l.clv==null?'—':pct(l.clv)}</td><td>${resTag(l.result)}</td><td class="${cls(l.r)}">${fmtR(l.r)}</td></tr>`).join('')+`</table>`:`<div class="empty">No legs yet.</div>`)+`</div>`;
+  $('record').innerHTML=h;
+}
+async function load(v){
+  try{
+    if(v==='today') renderToday(await (await fetch('/api/today')).json());
+    if(v==='record') renderRecord(await (await fetch('/api/record')).json());
+  }catch(e){ $(v).innerHTML=`<div class="card warn">Could not load. ${esc(e.message)}</div>`; }
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  ['today','record','how'].forEach(v=>$(v).hidden=v!==b.dataset.v);
+  load(b.dataset.v);
+});
+load('today'); setInterval(()=>{ if(!$('today').hidden) load('today'); },300000);
+</script>
+</body>
+</html>
